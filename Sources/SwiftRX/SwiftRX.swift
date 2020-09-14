@@ -8,31 +8,34 @@ protocol Action {}
 
 protocol State {}
 
-typealias Reducer <A: Action, S: State> = (A,  S) -> S
+typealias Reducer <S: State> = (Action,  S) -> S
+
+protocol StoreType {
+    func dispatch(_ action: Action)
+    func dispatch(_ effect: @escaping Effect)
+}
+
+typealias Effect = (_ state: State, _ store: StoreType) -> Action?
 
 
-//typealias ActionCreator = (_ state: State, _ store: Store) -> Action?
-
-
-final class Store<S: State, A: Action>: ObservableObject {
+final class Store<S: State>: StoreType, ObservableObject {
     @Published private(set) var state: S
-    private let reducer: Reducer<A, S>
+    private let reducer: Reducer<S>
     
-    init(initialState: S, reducer: @escaping Reducer<A, S>) {
+    init(initialState: S, reducer: @escaping Reducer<S>) {
         self.reducer = reducer
         self.state = initialState
     }
     
-    func dispatch(_ action: A) {
-        
+    func dispatch(_ action: Action) {
         state = reducer(action, state)
     }
     
-//    func dispatch(_ actionCreator: @escaping ActionCreator) {
-//        guard let action = actionCreator(state, self) else { return }
-//
-//        self.dispatch(action)
-//    }
+    func dispatch(_ effect: @escaping Effect) {
+        guard let action = effect(state, self) else { return }
+
+        self.dispatch(action)
+    }
 }
 
 //var globalStore: Store = Store(reducer: AppReducer, initialState: AppState())
@@ -40,7 +43,7 @@ final class Store<S: State, A: Action>: ObservableObject {
 // MARK: POST STATE
 
 struct PostState: State {
-    var posts: [String]
+    let posts: [String]
 }
 
 let initialPostState: PostState = PostState(posts: [])
@@ -53,10 +56,26 @@ enum PostAction: Action {
 
 func PostReducer(action: PostAction, state: PostState) -> PostState {
     switch action {
+        case .LoadPosts(let request):
+            break
+        case .RemovePost(index: let index):
+            break
+        case .AddOne(post: let post):
+            break
+    }
     
     return state
 }
 
+struct AppState: State {
+    var posts: PostState = initialPostState
+}
+
+func AppReducer(action: Action, state: AppState) -> AppState {
+    return AppState(posts: ((action as? PostAction) != nil) ? PostReducer(action: action as! PostAction, state: state.posts) : state.posts)
+}
+
+let store = Store<AppState>(initialState: AppState(), reducer: AppReducer)
 
 
 
