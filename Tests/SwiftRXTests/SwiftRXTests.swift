@@ -1,6 +1,7 @@
 import XCTest
 @testable import SwiftRX
 
+@available(iOS 13.0, *)
 final class SwiftRXTests: XCTestCase {
     var sut: Store<AppState>!
     
@@ -75,8 +76,11 @@ func AppReducer(action: Action, state: AppState) -> AppState {
     return AppState(posts: ((action as? PostAction) != nil) ? PostReducer(action: action as! PostAction, state: state.posts) : state.posts)
 }
 
-let store = Store<AppState>(initialState: AppState(), reducer: AppReducer)
+@available(iOS 13.0, *)
+let store = Store<AppState>(initialState: AppState()
+    , reducer: AppReducer)
 
+@available(iOS 13.0, *)
 let LoadPosts: ActionCreator<AppState> = { state, store in
     return PostAction.AddOne(post: "From Action Creator")
 }
