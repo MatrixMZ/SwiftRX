@@ -15,7 +15,7 @@ import Foundation
     But if you do not like it you can use Struct as well.
     
  */
-protocol Action {}
+public protocol Action {}
 
 /**
     Used to define State type Struct in redux pattern.
@@ -37,7 +37,7 @@ protocol Action {}
     let initialPostState: PostState = PostState(posts: [])
     ```
  */
-protocol State {}
+public protocol State {}
 
 /**
     Can be used to create reducer.
@@ -72,7 +72,7 @@ protocol State {}
  
     
  */
-typealias Reducer<S: State> = (Action,  S) -> S
+public typealias Reducer<S: State> = (Action,  S) -> S
 
 /**
     Used to dispatch async actions.
@@ -112,7 +112,7 @@ typealias Reducer<S: State> = (Action,  S) -> S
  
  */
 @available(iOS 13.0, *)
-typealias ActionCreator<S: State> = (_ state: S, _ store: Store<S>) -> Action?
+public typealias ActionCreator<S: State> = (_ state: S, _ store: Store<S>) -> Action?
 
 
 /**
@@ -157,7 +157,7 @@ typealias ActionCreator<S: State> = (_ state: S, _ store: Store<S>) -> Action?
     This will update the state in store and also automatically refresh every view that was implementing this feature.
  */
 @available(iOS 13.0, *)
-final class Store<S: State>: ObservableObject {
+public final class Store<S: State>: ObservableObject {
     @Published private(set) var state: S
     private let reducer: Reducer<S>
     
