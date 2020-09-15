@@ -111,7 +111,6 @@ public typealias Reducer<S: State> = (Action,  S) -> S
     - Returns: Optional<Action>
  
  */
-@available(iOS 13.0, *)
 public typealias ActionCreator<S: State> = (_ state: S, _ store: Store<S>) -> Action?
 
 
@@ -156,7 +155,6 @@ public typealias ActionCreator<S: State> = (_ state: S, _ store: Store<S>) -> Ac
     ```
     This will update the state in store and also automatically refresh every view that was implementing this feature.
  */
-@available(iOS 13.0, *)
 public final class Store<S: State>: ObservableObject {
     @Published private(set) var state: S
     private let reducer: Reducer<S>
