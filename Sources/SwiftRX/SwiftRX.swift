@@ -4,18 +4,28 @@ import Foundation
     Should be implemented with every redux action.
  
     # Implementation
-    Enum type objects are the best option to implement it because it is easy to define action payload.
+    To declare an `Action` use struct, good convention is to group them by nesting in the other struct.
+    If you want to specify payload - simply put any constant attribute definition inside `Action`.
     ```
-    enum PostAction: Action {
-        case LoadPosts(_ request: String)
-        case RemovePost(index: Int)
-        case AddOne(post: String)
+    struct PostAction {
+        struct LoadPosts: Action {
+            let request: String
+        }
+        
+        struct RemovePost: Action {
+            let index: Int
+        }
+        
+        struct AddOne: Action {
+            let post: String
+        }
     }
     ```
     But if you do not like it you can use Struct as well.
     
  */
 public protocol Action {}
+
 
 /**
     Used to define State type Struct in redux pattern.
@@ -79,17 +89,15 @@ public typealias Reducer<S: State> = (Action,  S) -> S
  
     Async actions can be dispatched from inside of the fuction after the function returned Action or nil by simply placing them in Dispatch Queue.
  
+    If you want to get access to action's payload you have to cast it using `if let` statement.
+ 
     # Implementation
     ```
-     struct PostsActionCreator {
-         static let getPosts: ActionCreator = { state, store in
-             AF.request("https://jsonplaceholder.typicode.com/posts").response { response in
-                 let response: [Post] = try! JSONDecoder().decode([Post].self, from: response.data!)
-                 store.dispatch(PostAction.LoadPosts(.success(response: response)))
-             }
- 
-             return PostAction.LoadPosts(.loading)
+     let PostActionCreator: ActionCreator = { action in
+         if let payload = action as? PostAction.AddOne {
+             return PostAction.AddOne(post: payload.post)
          }
+         return nil
      }
     ```
     Alternative:
@@ -111,7 +119,7 @@ public typealias Reducer<S: State> = (Action,  S) -> S
     - Returns: Optional<Action>
  
  */
-public typealias ActionCreator<S: State> = (_ state: S, _ store: Store<S>) -> Action?
+public typealias ActionCreator = (_ action: Action) -> Action?
 
 
 /**
@@ -164,13 +172,23 @@ public final class Store<S: State>: ObservableObject {
         self.state = initialState
     }
     
-    func dispatch(_ action: Action) {
+    public func dispatch(_ action: Action) {
         state = reducer(action, state)
     }
     
-    func dispatch(_ actionCreator: @escaping ActionCreator<S>) {
-        guard let action = actionCreator(state, self) else { return }
-
-        self.dispatch(action)
+    func dispatch(_ resolver: ActionCreator, payload: Action) {
+        if let action = resolver(payload) {
+            dispatch(action)
+        }
     }
+}
+
+
+/**
+ * SwiftRX Helper
+ */
+public enum Request<Response, Error> {
+    case loading
+    case success(response: Response)
+    case failure(error: Error)
 }

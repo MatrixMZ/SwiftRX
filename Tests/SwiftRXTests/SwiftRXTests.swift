@@ -9,22 +9,21 @@ final class SwiftRXTests: XCTestCase {
         super.setUp()
         sut = Store<AppState>(initialState: AppState(), reducer: AppReducer)
     }
-    
+
     override func tearDown() {
         sut = nil
         super.tearDown()
     }
-    
-    
+
     func testCreateStore() {
         XCTAssertEqual(sut.state.posts.posts, AppState().posts.posts, "After init store conatins different items")
     }
-    
+
     func testDispatchAction() {
         sut.dispatch(PostAction.AddOne(post: "New Post"))
         XCTAssertEqual(sut.state.posts.posts, ["New Post"], "After dispatching action the store does not contain expected value")
     }
-    
+
     func testDispatchMultipleActions() {
         sut.dispatch(PostAction.AddOne(post: "Post1"))
         sut.dispatch(PostAction.AddOne(post: "Post2"))
@@ -33,10 +32,10 @@ final class SwiftRXTests: XCTestCase {
     }
     
     func testActionCreator() {
-           sut.dispatch(LoadPosts)
+        sut.dispatch(PostActionCreator, payload: PostAction.AddOne(post: "From Action Creator"))
 
-           XCTAssertEqual(sut.state.posts.posts, ["From Action Creator"], "Action Creator does not return Action")
-       }
+       XCTAssertEqual(sut.state.posts.posts, ["From Action Creator"], "Action Creator does not return Action")
+    }
 
 }
 
@@ -47,22 +46,18 @@ struct PostState: State {
 
 let initialPostState: PostState = PostState(posts: [])
 
-enum PostAction: Action {
-    case LoadPosts(_ request: String)
-    case RemovePost(index: Int)
-    case AddOne(post: String)
-}
-
-func PostReducer(action: PostAction, state: PostState) -> PostState {
+func PostReducer(action: Action, state: PostState) -> PostState {
     switch action {
-        case .LoadPosts:
-            print("LoadPost Action Dispatched")
+        case let action as PostAction.LoadPosts:
+            print("\(action.request)")
             break
-        case .RemovePost:
-            print("RemovePost Action Dispatched")
+        case let action as PostAction.RemovePost:
+            print("\(action.index)")
             break
-        case .AddOne(post: let post):
-            return PostState(posts: [] + state.posts + [post])
+        case let action as PostAction.AddOne:
+            return PostState(posts: [] + state.posts + [action.post])
+    default:
+        return state
     }
     
     return state
@@ -73,14 +68,34 @@ struct AppState: State {
 }
 
 func AppReducer(action: Action, state: AppState) -> AppState {
-    return AppState(posts: ((action as? PostAction) != nil) ? PostReducer(action: action as! PostAction, state: state.posts) : state.posts)
+    return AppState(
+        posts: PostReducer(action: action, state: state.posts)
+    )
 }
 
 @available(iOS 13.0, *)
-let store = Store<AppState>(initialState: AppState()
-    , reducer: AppReducer)
+let store = Store<AppState>(initialState: AppState(), reducer: AppReducer)
 
-@available(iOS 13.0, *)
-let LoadPosts: ActionCreator<AppState> = { state, store in
-    return PostAction.AddOne(post: "From Action Creator")
+
+
+let PostActionCreator: ActionCreator = { action in
+    if let payload = action as? PostAction.AddOne {
+        return PostAction.AddOne(post: payload.post)
+    }
+    return nil
+}
+
+
+struct PostAction {
+    struct LoadPosts: Action {
+        let request: String
+    }
+    
+    struct RemovePost: Action {
+        let index: Int
+    }
+    
+    struct AddOne: Action {
+        let post: String
+    }
 }
