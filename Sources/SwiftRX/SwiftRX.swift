@@ -58,22 +58,26 @@ public protocol State {}
     For main state:
     ```
     func AppReducer(action: Action, state: AppState) -> AppState {
-        return AppState(posts: ((action as? PostAction) != nil) ? PostReducer(action: action as! PostAction, state: state.posts) : state.posts)
+        return AppState(
+            posts: PostReducer(action: action, state: state.posts)
+        )
     }
     ```
  
     For sub state
     ```
-    func PostReducer(action: PostAction, state: PostState) -> PostState {
+    func PostReducer(action: Action, state: PostState) -> PostState {
         switch action {
-            case .LoadPosts:
-                print("LoadPost Action Dispatched")
+            case let action as PostAction.LoadPosts:
+                print("\(action.request)")
                 break
-            case .RemovePost:
-                print("RemovePost Action Dispatched")
+            case let action as PostAction.RemovePost:
+                print("\(action.index)")
                 break
-            case .AddOne(post: let post):
-                return PostState(posts: [] + state.posts + [post])
+            case let action as PostAction.AddOne:
+                return PostState(posts: [] + state.posts + [action.post])
+        default:
+            return state
         }
         
         return state
@@ -167,7 +171,7 @@ public final class Store<S: State>: ObservableObject {
     @Published private(set) var state: S
     private let reducer: Reducer<S>
     
-    init(initialState: S, reducer: @escaping Reducer<S>) {
+    public init(initialState: S, reducer: @escaping Reducer<S>) {
         self.reducer = reducer
         self.state = initialState
     }
