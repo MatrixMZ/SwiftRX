@@ -168,7 +168,7 @@ public typealias ActionCreator = (_ action: Action) -> Action?
     This will update the state in store and also automatically refresh every view that was implementing this feature.
  */
 public final class Store<S: State>: ObservableObject {
-    @Published private(set) var state: S
+    @Published public private(set) var state: S
     private let reducer: Reducer<S>
     
     public init(initialState: S, reducer: @escaping Reducer<S>) {
