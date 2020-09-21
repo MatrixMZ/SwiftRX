@@ -109,6 +109,16 @@ public typealias Reducer<S: State> = (Action,  S) -> S
  */
 public typealias ActionCreator = () -> Action?
 
+/**
+    Helps to reduce ammount of code inside views making shortcut to needed state.
+ 
+    # Example
+    ```
+    let posts: Selector<AppState, PostState> = { state in return state.posts }
+    ```
+ */
+public typealias Selector<From: State, To: State> = (From) -> To
+
 
 /**
     This final class defines Store that access will be available in the entire application.
@@ -182,5 +192,10 @@ public final class Store<S: State>: ObservableObject {
         if let action = actionCreator() {
             dispatch(action)
         }
+    }
+    
+    
+    public func select<To: State>(selector: Selector<S, To>) -> To {
+        return selector(state)
     }
 }

@@ -1,6 +1,7 @@
 import XCTest
 @testable import SwiftRX
 
+
 @available(iOS 13.0, *)
 final class SwiftRXTests: XCTestCase {
     var sut: Store<AppState>!
@@ -29,6 +30,20 @@ final class SwiftRXTests: XCTestCase {
         sut.dispatch(PostAction.AddOne(post: "Post2"))
 
         XCTAssertEqual(sut.state.posts.posts, ["Post1", "Post2"], "After dispatching multiple action the store does not contain expected value")
+    }
+    
+    func testActionCreator() {
+        
+        sut.dispatch(LoadData(PostAction.LoadPosts(request: "Test")))
+        
+        XCTAssertEqual(sut.state.posts.posts, ["From Action Creator"], "Action creator dispatcher does not dispaches any actions")
+    }
+    
+    func testSelectors() {
+        sut.dispatch(PostAction.AddOne(post: "From Selector"))
+        let selectedState = sut.select(selector: selectPostsState)
+       
+        XCTAssertEqual(selectedState.posts, ["From Selector"], "Selector does not select proper data")
     }
 
 }
@@ -71,10 +86,9 @@ func AppReducer(action: Action, state: AppState) -> AppState {
 let store = Store<AppState>(initialState: AppState(), reducer: AppReducer)
 
 
-func LoadData(payload: PostAction.LoadPosts) -> ActionCreator {
+func LoadData(_ payload: PostAction.LoadPosts) -> ActionCreator {
    return {
-        // You have to return here the AsyncActioon or nil
-        return PostAction.LoadPosts(request: "XD")
+        return PostAction.AddOne(post: "From Action Creator")
    }
 }
 
@@ -97,4 +111,6 @@ struct PostAction {
     }
 }
 
-let postsFeatureSelector: (AppState) -> PostState = { state in return state.posts }
+let selectPostsState: SwiftRX.Selector<AppState, PostState> = { state in return state.posts }
+
+
