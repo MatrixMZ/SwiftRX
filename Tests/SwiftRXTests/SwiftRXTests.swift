@@ -30,12 +30,6 @@ final class SwiftRXTests: XCTestCase {
 
         XCTAssertEqual(sut.state.posts.posts, ["Post1", "Post2"], "After dispatching multiple action the store does not contain expected value")
     }
-    
-    func testActionCreator() {
-        sut.dispatch(PostActionCreator, payload: PostAction.AddOne(post: "From Action Creator"))
-
-       XCTAssertEqual(sut.state.posts.posts, ["From Action Creator"], "Action Creator does not return Action")
-    }
 
 }
 
@@ -77,12 +71,11 @@ func AppReducer(action: Action, state: AppState) -> AppState {
 let store = Store<AppState>(initialState: AppState(), reducer: AppReducer)
 
 
-
-let PostActionCreator: ActionCreator = { action in
-    if let payload = action as? PostAction.AddOne {
-        return PostAction.AddOne(post: payload.post)
-    }
-    return nil
+func LoadData(payload: PostAction.LoadPosts) -> ActionCreator {
+   return {
+        // You have to return here the AsyncActioon or nil
+        return PostAction.LoadPosts(request: "XD")
+   }
 }
 
 
@@ -98,4 +91,10 @@ struct PostAction {
     struct AddOne: Action {
         let post: String
     }
+    
+    struct Test: Action {
+       
+    }
 }
+
+let postsFeatureSelector: (AppState) -> PostState = { state in return state.posts }

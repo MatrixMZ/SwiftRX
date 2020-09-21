@@ -97,33 +97,17 @@ public typealias Reducer<S: State> = (Action,  S) -> S
  
     # Implementation
     ```
-     let PostActionCreator: ActionCreator = { action in
-         if let payload = action as? PostAction.AddOne {
-             return PostAction.AddOne(post: payload.post)
-         }
-         return nil
+    func LoadData(payload: PostAction.LoadPosts) -> ActionCreator {
+        return {
+             // You have to return here the Action or nil to skip
+             return PostAction.LoadPosts(request: "XD")
+        }
      }
     ```
-    Alternative:
-    ```
-    let LoadPosts: ActionCreator<AppState> = { state, store in
-         AF.request("https://jsonplaceholder.typicode.com/posts").response { response in
-            let response: [Post] = try! JSONDecoder().decode([Post].self, from: response.data!)
-            store.dispatch(PostAction.LoadPosts(.success(response: response)))
-        }
- 
-        return PostAction.LoadPosts(.loading)
-    }
-    ```
- 
-    - Parameters:
-        - state: State
-        - store: Store
- 
     - Returns: Optional<Action>
  
  */
-public typealias ActionCreator = (_ action: Action) -> Action?
+public typealias ActionCreator = () -> Action?
 
 
 /**
@@ -168,6 +152,7 @@ public typealias ActionCreator = (_ action: Action) -> Action?
     This will update the state in store and also automatically refresh every view that was implementing this feature.
  */
 public final class Store<S: State>: ObservableObject {
+
     @Published public private(set) var state: S
     private let reducer: Reducer<S>
     
@@ -180,19 +165,22 @@ public final class Store<S: State>: ObservableObject {
         state = reducer(action, state)
     }
     
-    func dispatch(_ resolver: ActionCreator, payload: Action) {
-        if let action = resolver(payload) {
+    /**
+     *  Method can dispatch 'ActionCreators' to handle async actions.
+     *
+     *  # Example 'ActionCreator' function
+     *    ```
+     *    func LoadData(payload: PostAction.LoadPosts) -> ActionCreator {
+             return {
+                  // You have to return here the Action or nil to skip
+                  return PostAction.LoadPosts(request: "XD")
+             }
+          }
+     *    ```
+     */
+    public func dispatch(_ actionCreator: ActionCreator) {
+        if let action = actionCreator() {
             dispatch(action)
         }
     }
-}
-
-
-/**
- * SwiftRX Helper
- */
-public enum Request<Response, Error> {
-    case loading
-    case success(response: Response)
-    case failure(error: Error)
 }
