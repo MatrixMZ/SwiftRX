@@ -21,7 +21,7 @@ Add to project.
 
 ### State
 This defines model for your data that can be access inside the application.
-`States` can only be mutated by `Reducers` .
+`States` can only be mutated by `Reducers`.
 
 ```swift
 // sub state
@@ -42,7 +42,7 @@ struct AppState: State {
 
 ### Action
 Defines a list of actions that can be used to mutate the `State`.
-It is good to keep `Actions` inside one group - 'struct' for particular `State`.
+It is good convention to keep `Actions` inside one group - `struct` for particular `State`.
 `Actions` can also have `paylaod` definition inside - it is constants.
 
 ```swift
@@ -108,6 +108,7 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     }
 }
 ```
+
 AppView.swift and its sub views
 ```swift
 struct AppView: View {
@@ -119,20 +120,20 @@ struct AppView: View {
 It is optional but helps to create a shortcut path inside `Views` to access data from particular `State` in `Store`.
 Its a simple computed variable.
 ```swift
-    struct AppView: View {
-        @EnvironmentObject var store: Store<AppState>
- 
-        // Define selector
-        var productState: ProductState {
-            return store.state.products
-        }
+struct AppView: View {
+    @EnvironmentObject var store: Store<AppState>
 
-        var body: some View {
-            // Use selector to access data
-            Text("Total products: \(productState.products.count)")
-        }
+    // Define selector
+    var productState: ProductState {
+        return store.state.products
     }
-*/
+
+    var body: some View {
+        // Use selector to access data
+        Text("Total products: \(productState.products.count)")
+    }
+}
+
 ```
 
 ### Async Actions: ActionCreator & ActionCreatorFactory
