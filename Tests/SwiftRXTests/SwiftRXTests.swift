@@ -2,7 +2,6 @@ import XCTest
 @testable import SwiftRX
 
 
-@available(iOS 13.0, *)
 final class SwiftRXTests: XCTestCase {
     var sut: Store<AppState>!
     
@@ -32,20 +31,22 @@ final class SwiftRXTests: XCTestCase {
         XCTAssertEqual(sut.state.posts.posts, ["Post1", "Post2"], "After dispatching multiple action the store does not contain expected value")
     }
     
-    func testActionCreator() {
+    func testDispatchingActionCreatorFactory() {
+        sut.dispatch(AsyncWithPayload(PostAction.AddOne(post: "XD")))
         
-        sut.dispatch(LoadData(PostAction.LoadPosts(request: "Test")))
-        
-        XCTAssertEqual(sut.state.posts.posts, ["From Action Creator"], "Action creator dispatcher does not dispaches any actions")
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
+            XCTAssertEqual(self.sut.state.posts.posts, ["First", "Async Call"], "Action creator dispatcher does not dispaches correct actions")
+        }
+       
     }
     
-    func testSelectors() {
-        sut.dispatch(PostAction.AddOne(post: "From Selector"))
-        let selectedState = sut.select(selector: selectPostsState)
-       
-        XCTAssertEqual(selectedState.posts, ["From Selector"], "Selector does not select proper data")
+    func testDispatchingActionCreator() {
+        sut.dispatch(AsyncWithoutPayload)
+        
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
+            XCTAssertEqual(self.sut.state.posts.posts, ["First", "Async Call"], "Action creator dispatcher does not dispaches correct actions")
+        }
     }
-
 }
 
 
@@ -82,15 +83,7 @@ func AppReducer(action: Action, state: AppState) -> AppState {
     )
 }
 
-@available(iOS 13.0, *)
 let store = Store<AppState>(initialState: AppState(), reducer: AppReducer)
-
-
-func LoadData(_ payload: PostAction.LoadPosts) -> ActionCreator {
-   return {
-        return PostAction.AddOne(post: "From Action Creator")
-   }
-}
 
 
 struct PostAction {
@@ -111,6 +104,20 @@ struct PostAction {
     }
 }
 
-let selectPostsState: SwiftRX.Selector<AppState, PostState> = { state in return state.posts }
+let AsyncWithPayload: ActionCreatorFactory<PostAction.AddOne> = { payload in
+    return { store in
+        DispatchQueue.main.async {
+            store.dispatch(PostAction.AddOne(post: payload.post))
+        }
+        
+        return PostAction.AddOne(post: "First")
+    }
+}
 
-
+let AsyncWithoutPayload: ActionCreator = { store in
+    DispatchQueue.main.async {
+        store.dispatch(PostAction.AddOne(post: "Default"))
+    }
+    
+    return PostAction.AddOne(post: "First")
+}

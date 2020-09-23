@@ -1,201 +1,211 @@
 import Foundation
 
+
 /**
-    Should be implemented with every redux action.
+    Defines `Action` types for `Reducers` with possible payload inside.
  
-    # Implementation
-    To declare an `Action` use struct, good convention is to group them by nesting in the other struct.
-    If you want to specify payload - simply put any constant attribute definition inside `Action`.
-    ```
-    struct PostAction {
-        struct LoadPosts: Action {
-            let request: String
+    # How to use?
+
+        // without payload
+        struct LoadPosts: Action { }
+     
+        // with payload
+        struct LoadPostsSuccess: Action {
+            let posts: [Post]
         }
-        
-        struct RemovePost: Action {
-            let index: Int
-        }
-        
-        struct AddOne: Action {
-            let post: String
-        }
-    }
-    ```
-    But if you do not like it you can use Struct as well.
-    
  */
-public protocol Action {}
+public protocol Action { }
 
 
 /**
-    Used to define State type Struct in redux pattern.
+    Defines data model that can be available in `Store`.
  
-    # Implementation
-    Main state definition will be different comparing to substate.
-    Main:
-    ```
-    struct AppState: State {
-        var posts: PostState = initialPostState
-    }
-    ```
-    Sub:
-    ```
-    struct PostState: State {
-        let posts: [String]
-    }
-    
-    let initialPostState: PostState = PostState(posts: [])
-    ```
+    # How to use?
+        // sub state
+        struct PostState: State {
+            let posts: [Post]
+        }
+        
+        // initial sub state definition
+        let initialPostState: PostState = PostState(posts: [])
+
+        // main state
+        struct AppState: State {
+            var posts: PostState = initialPostState
+        }
  */
 public protocol State {}
 
+
 /**
-    Can be used to create reducer.
-    Takes Action and State and returns updated copy of state.
+    Defines a pure function that mutate the given `State` inside `Store` depending on the given `Action`.
  
-    # Implementation
+    # How to use?
  
-    For main state:
-    ```
-    func AppReducer(action: Action, state: AppState) -> AppState {
-        return AppState(
-            posts: PostReducer(action: action, state: state.posts)
-        )
-    }
-    ```
+        // main state reducer
+        func AppReducer(action: Action, state: AppState) -> AppState {
+            return AppState(
+                posts: PostReducer(action: action, state: state.posts)
+            )
+        }
  
-    For sub state
-    ```
-    func PostReducer(action: Action, state: PostState) -> PostState {
-        switch action {
+        // sub state reducer
+        func PostReducer(action: Action, state: PostState) -> PostState {
+            switch action {
             case let action as PostAction.LoadPosts:
-                print("\(action.request)")
-                break
-            case let action as PostAction.RemovePost:
-                print("\(action.index)")
+                return state
                 break
             case let action as PostAction.AddOne:
                 return PostState(posts: [] + state.posts + [action.post])
-        default:
-            return state
+            default:
+                return state
+            }
         }
         
-        return state
-    }
-    ```
+    - Parameters:
+        - action: Type of `Action` that will mutate the `State`.
+        - state: Type of `State` that will be mutated.
  
-    
+    - Returns: Mutated `State`
  */
 public typealias Reducer<S: State> = (Action,  S) -> S
 
-/**
-    Used to dispatch async actions.
- 
-    Async actions can be dispatched from inside of the fuction after the function returned Action or nil by simply placing them in Dispatch Queue.
- 
-    If you want to get access to action's payload you have to cast it using `if let` statement.
- 
-    # Implementation
-    ```
-    func LoadData(payload: PostAction.LoadPosts) -> ActionCreator {
-        return {
-             // You have to return here the Action or nil to skip
-             return PostAction.LoadPosts(request: "XD")
-        }
-     }
-    ```
-    - Returns: Optional<Action>
- 
- */
-public typealias ActionCreator = () -> Action?
 
 /**
-    Helps to reduce ammount of code inside views making shortcut to needed state.
- 
-    # Example
-    ```
-    let posts: Selector<AppState, PostState> = { state in return state.posts }
-    ```
- */
-public typealias Selector<From: State, To: State> = (From) -> To
-
-
-/**
-    This final class defines Store that access will be available in the entire application.
+    Can be used to define function that can be used to dispatch async `Action`.
+    It can be usefull with making async API calls.
     
-    # Implementation
-    In your ```SceneDelegate.swift```
-    ```
-    class SceneDelegate: UIResponder, UIWindowSceneDelegate {
-        var store: Store<AppState> = Store<AppState>(initialState: AppState(), reducer: AppReducer)
+    Methd can be later dipatched in the application `Store`.
  
-        ...
+    # How to use?
+        let AsyncWithoutPayload: ActionCreator = { store in
+            DispatchQueue.main.async {
+                // action dispatched asynchronously
+                store.dispatch(PostAction.AddOne(post: "Default"))
+            }
+     
+            // action dispatched straight away
+            return PostAction.AddOne(post: "First")
+        }
  
-        func scene(_ scene: UIScene, willConnectTo session: UISceneSession, options connectionOptions: UIScene.ConnectionOptions) {
- 
-            // It has to be injected as EnvironmentObject to the MainView
-            let appView = AppView().environmentObject(store)
+    - Parameters:
+        - store: Type of `Store` that can be used to dispatch an action.
+    - Returns: `Optional<Action>` that can be dispatched straight away.
+  */
+public typealias ActionCreator = (StoreType) -> Action?
 
-            if let windowScene = scene as? UIWindowScene {
-                let window = UIWindow(windowScene: windowScene)
-                window.rootViewController = UIHostingController(rootView: appView)
-                self.window = window
-                window.makeKeyAndVisible()
+
+/**
+    Can be used to define function that can be used to dispatch async `Action`.
+    But in difference to `ActionCreator` it also supports getting payload from `Action`.
+    It can be usefull with making async API calls.
+    
+    Methd can be later dipatched in the application`Store`.
+ 
+    # How to use?
+        let AsyncWithPayload: ActionCreatorFactory<PostAction.AddOne> = { payload in
+            return { store in
+                DispatchQueue.main.async {
+                    store.dispatch(PostAction.AddOne(post: action.post))
+                }
+                 
+                return PostAction.AddOne(post: "First")
             }
         }
-    ```
-    So you can use it in view like so:
-    ```
-    struct AppView: View {
-        @EnvironmentObject var store: Store
  
-        ...
-    }
-    
-    ```
- 
-    # Action | ActionCreator dispatcher
-    To dispatch an action or action creator use:
-    ```
-        store.dispatch(LoadPosts)
-    ```
-    This will update the state in store and also automatically refresh every view that was implementing this feature.
+    - Parameters:
+        - payload: Type of `Action` to define the payload.
+    - Returns: `ActionCreator` that can be dispatched in `Store`.
  */
-public final class Store<S: State>: ObservableObject {
+public typealias ActionCreatorFactory<A: Action> = (A) -> ActionCreator
+
+
+/**
+    Helper protocol to support `ActionCreator` in the app.
+ */
+public protocol StoreType {
+    func dispatch(_ actionCreator: ActionCreator)
+    func dispatch(_ action: Action)
+}
+
+
+/**
+    The `Store` keeps the whole state tree of your application.
+    The only way to change the state inside it is to dispatch an action on it.
+ 
+    # Implementation with SwiftUI
+        
+    ## SceneDelegate.swift
+        import SwiftRX
+
+        class SceneDelegate: UIResponder, UIWindowSceneDelegate {
+            // define global store
+            let store: Store<AppState> = Store<AppState>(initialState: AppState(), reducer: AppReducer)
+            ...
+ 
+            func scene(_ scene: UIScene, willConnectTo session: UISceneSession, options connectionOptions: UIScene.ConnectionOptions) {
+                let contentView = AppView().environmentObject(store) /// Inject `Store` to `AppView` as `EnvironmentObject`
+                ...
+            }
+        }
+    
+    ## AppView.swift and its sub views
+        struct AppView: View {
+            @EnvironmentObject var store: Store<AppState>
+        }
+    
+    # Selectors
+    It is optional but helps to create a shortcut path inside `Views` to access data from particular `State` in `Store`.
+    Its a simple computed variable.
+ 
+        struct AppView: View {
+            @EnvironmentObject var store: Store<AppState>
+     
+            // Define selector
+            var productState: ProductState {
+                return store.state.products
+            }
+ 
+            var body: some View {
+                // Use selector to access data
+                Text("Total products: \(productState.products.count)")
+            }
+        }
+ */
+public final class Store<S: State>: ObservableObject, StoreType {
 
     @Published public private(set) var state: S
     private let reducer: Reducer<S>
     
+    /**
+        Creates `Store` that can be used to mutating and accessing `State` in the application.
+     
+        - Parameters:
+            - initialState: Main `State` that will be used to define data tree.
+            - reducer: Main `Reducer<State>` that will help with mutating the main `State`.
+     */
     public init(initialState: S, reducer: @escaping Reducer<S>) {
         self.reducer = reducer
         self.state = initialState
     }
     
+    /**
+        Dispatches an `Action` to the `Reducer`to mutate the `State`.
+        - Parameters:
+            - action: `Action` to be dispatched.
+     */
     public func dispatch(_ action: Action) {
         state = reducer(action, state)
     }
     
     /**
-     *  Method can dispatch 'ActionCreators' to handle async actions.
-     *
-     *  # Example 'ActionCreator' function
-     *    ```
-     *    func LoadData(payload: PostAction.LoadPosts) -> ActionCreator {
-             return {
-                  // You have to return here the Action or nil to skip
-                  return PostAction.LoadPosts(request: "XD")
-             }
-          }
-     *    ```
+        Dispatches an `ActionCreator` that can dispatch asynchronously different `Action` in the background.
+        - Parameters:
+            - actionCreator: `ActionCreator` - function that can return `Optional<Action>` to dispatch action after completion or dispatch an `Action` asynchronously.
      */
     public func dispatch(_ actionCreator: ActionCreator) {
-        if let action = actionCreator() {
+        if let action = actionCreator(self) {
             dispatch(action)
         }
-    }
-    
-    
-    public func select<To: State>(selector: Selector<S, To>) -> To {
-        return selector(state)
     }
 }
