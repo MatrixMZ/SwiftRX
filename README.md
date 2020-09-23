@@ -1,5 +1,5 @@
 # SwiftRX
-Swift Package that bring `Redux` pattern into `Swift`!
+Swift Package that brings `Redux` pattern into `Swift`!
 
 ## Features
 - Lightweight
