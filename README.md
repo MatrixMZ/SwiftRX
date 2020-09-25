@@ -173,5 +173,17 @@ let AsyncWithPayload: ActionCreatorFactory<PostAction.AddOne> = { payload in
 }
 ```
 
+## Extra
+### Request<SuccessType, FailureType>
+This enum supports getting and storing data catched from API requests.
+
+```swift
+struct PostsState: State {
+    let posts: Request<[Posts], String>
+}
+
+let initialPostsState: PostsState(posts: .initial)
+```
+
 ## Licence
 Licence under the [MIT Licence](LICENSE)

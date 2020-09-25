@@ -209,3 +209,18 @@ public final class Store<S: State>: ObservableObject, StoreType {
         }
     }
 }
+
+// MARK: Helpers
+
+/**
+    Supports getting and storing data catched from API requests.
+ 
+    # How to use?
+        let auth: Request<String, String> = .initial
+ */
+public enum Request<Success, Failure> {
+    case initial
+    case inProgress
+    case success(Success)
+    case failure(Failure)
+}
