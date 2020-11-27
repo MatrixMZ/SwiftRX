@@ -3,121 +3,80 @@ import XCTest
 
 
 final class SwiftRXTests: XCTestCase {
-    var sut: Store<AppState>!
+    var sut: RXStore<AppState>!
     
     override func setUp() {
         super.setUp()
-        sut = Store<AppState>(initialState: AppState(), reducer: AppReducer)
+        sut = RXStore(reducer: appReducer, state: AppState(), effects: [RXLogger()])
     }
 
     override func tearDown() {
         sut = nil
         super.tearDown()
     }
-
-    func testCreateStore() {
-        XCTAssertEqual(sut.state.posts.posts, AppState().posts.posts, "After init store conatins different items")
-    }
-
-    func testDispatchAction() {
-        sut.dispatch(PostAction.AddOne(post: "New Post"))
-        XCTAssertEqual(sut.state.posts.posts, ["New Post"], "After dispatching action the store does not contain expected value")
-    }
-
-    func testDispatchMultipleActions() {
-        sut.dispatch(PostAction.AddOne(post: "Post1"))
-        sut.dispatch(PostAction.AddOne(post: "Post2"))
-
-        XCTAssertEqual(sut.state.posts.posts, ["Post1", "Post2"], "After dispatching multiple action the store does not contain expected value")
-    }
     
-    func testDispatchingActionCreatorFactory() {
-        sut.dispatch(AsyncWithPayload(PostAction.AddOne(post: "XD")))
-        
+    func testDispatchAnAction() {
+        let post = [Post(id: 10, title: "New Post")]
+
+        sut.dispatch(PostAction.loadSuccess(post))
+
         DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
-            XCTAssertEqual(self.sut.state.posts.posts, ["First", "Async Call"], "Action creator dispatcher does not dispaches correct actions")
-        }
-       
-    }
-    
-    func testDispatchingActionCreator() {
-        sut.dispatch(AsyncWithoutPayload)
-        
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
-            XCTAssertEqual(self.sut.state.posts.posts, ["First", "Async Call"], "Action creator dispatcher does not dispaches correct actions")
+            XCTAssertEqual(self.sut.state.posts.posts, post, "After dispatching action the store does not contain expected value")
         }
     }
 }
-
-
-struct PostState: State {
-    let posts: [String]
+// MARK: MODELS
+struct Post: Equatable {
+    let id: Int
+    let title: String
 }
 
-let initialPostState: PostState = PostState(posts: [])
 
-func PostReducer(action: Action, state: PostState) -> PostState {
-    switch action {
-        case let action as PostAction.LoadPosts:
-            print("\(action.request)")
-            break
-        case let action as PostAction.RemovePost:
-            print("\(action.index)")
-            break
-        case let action as PostAction.AddOne:
-            return PostState(posts: [] + state.posts + [action.post])
-    default:
-        return state
+// MARK: APP STATE
+struct AppState: RXState {
+    var posts = PostsState()
+}
+
+let appReducer: RXReducer<AppState> = { state, action in
+    var state = state
+    
+    state.posts = postsReducer(state.posts, action)
+    
+    return state
+}
+
+
+
+// MARK: POSTS SUB STATE
+struct PostsState: RXState {
+    var posts: [Post] = []
+}
+
+enum PostAction: RXAction {
+    case load
+    case loadSuccess([Post])
+    case loadFailure(String)
+}
+
+let postsReducer: RXReducer<PostsState> = { state, action in
+    var state = state
+    
+    switch action as! PostAction {
+
+    case .load:
+        print("")
+    case .loadSuccess(let posts):
+        state.posts = posts
+    case .loadFailure(let error):
+        print(error)
     }
     
     return state
 }
 
-struct AppState: State {
-    var posts: PostState = initialPostState
-}
 
-func AppReducer(action: Action, state: AppState) -> AppState {
-    return AppState(
-        posts: PostReducer(action: action, state: state.posts)
-    )
-}
-
-let store = Store<AppState>(initialState: AppState(), reducer: AppReducer)
-
-
-struct PostAction {
-    struct LoadPosts: Action {
-        let request: String
+func RXLogger() -> RXEffect<AppState> {
+    return { state, action, dispatcher in
+        print("[\(action.self)]")
     }
-    
-    struct RemovePost: Action {
-        let index: Int
-    }
-    
-    struct AddOne: Action {
-        let post: String
-    }
-    
-    struct Test: Action {
-       
-    }
-}
-
-let AsyncWithPayload: ActionCreatorFactory<PostAction.AddOne> = { payload in
-    return { store in
-        DispatchQueue.main.async {
-            store.dispatch(PostAction.AddOne(post: payload.post))
-        }
-        
-        return PostAction.AddOne(post: "First")
-    }
-}
-
-let AsyncWithoutPayload: ActionCreator = { store in
-    DispatchQueue.main.async {
-        store.dispatch(PostAction.AddOne(post: "Default"))
-    }
-    
-    return PostAction.AddOne(post: "First")
 }
