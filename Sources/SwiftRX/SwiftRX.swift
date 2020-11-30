@@ -125,7 +125,7 @@ public typealias RXDispatcher = (RXAction) -> Void
         - store: Type of `Store` that can be used to dispatch an action.
     - Returns: `Optional<Action>` that can be dispatched straight away.
   */
-typealias RXEffect<Store: RXState> = (Store, RXAction, @escaping RXDispatcher) -> Void
+public typealias RXEffect<Store: RXState> = (Store, RXAction, @escaping RXDispatcher) -> Void
 
 
 
@@ -178,23 +178,36 @@ typealias RXEffect<Store: RXState> = (Store, RXAction, @escaping RXDispatcher) -
                 }
             }
         }
-        
-        
-    
 */
 public class RXStore<State: RXState>: ObservableObject {
     
-    var reducer: RXReducer<State>
-    @Published private(set) var state: State
-    var effects: [RXEffect<State>]
+    private let reducer: RXReducer<State>
+    @Published public private(set) var state: State
+    private let effects: [RXEffect<State>]
     
-    init(reducer: @escaping RXReducer<State>, state: State, effects: [RXEffect<State>] = []) {
+    
+    /**
+        Creates `Store` that can be used to mutating and accessing `State` in the application.
+     
+        - Parameters:
+            
+            - reducer: Main `Reducer<State>` that will help with mutating the main `State`.
+            - state: Main `State` that will be used to define data tree.
+            - effects: An array of middlewere (`RXEffect`) to catch and execute code during dispatching.
+     
+     */
+    public init(reducer: @escaping RXReducer<State>, state: State, effects: [RXEffect<State>] = []) {
         self.reducer = reducer
         self.state = state
         self.effects = effects
     }
     
-    func dispatch(_ action: RXAction) {
+    /**
+        Dispatches an `Action` to the `Reducer`to mutate the `State`.
+        - Parameters:
+            - action: `Action` to be dispatched.
+     */
+    public func dispatch(_ action: RXAction) {
         DispatchQueue.main.async {
             self.state = self.reducer(self.state, action)
         }

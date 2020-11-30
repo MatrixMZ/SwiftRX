@@ -24,19 +24,8 @@ This defines model for your data that can be access inside the application.
 `States` can only be mutated by `Reducers`.
 
 ```swift
-// sub state
-struct PostState: State {
-    let posts: [Post]
-}
-
-// initial sub state definition
-let initialPostState: PostState = PostState(posts: [])
-
-// main state
-struct AppState: State {
-    // here you inclide your sub states
-    var posts: PostState = initialPostState
-    ...
+struct PostState: RXState {
+    let posts: [Post] = []
 }
 ```
 
@@ -46,17 +35,23 @@ It is good convention to keep `Actions` inside one group - `struct` for particul
 `Actions` can also have `paylaod` definition inside - it is constants.
 
 ```swift
-struct PostAction {
-    struct LoadPosts: Action {}
-    
-    struct RemovePost: Action {
-        let index: Int // payload
+# How to use with enums?
+     enum PostAction: RXAction {
+        // without payload
+         case load
+        // with payload
+         case loadSuccess([Post])
+         case loadFailure(String)
+     }
+     
+# Or with structs:
+    // without payload
+    struct LoadPosts: RXAction { }
+ 
+    // with payload
+    struct LoadPostsSuccess: RXAction {
+        let posts: [Post]
     }
-    
-    struct AddOne: Action {
-        let post: String // payload
-    }
-}
 ```
 
 Actions can be dispatched in `Store`.
@@ -69,42 +64,79 @@ store.dispatch(PostAction.AddOne(post: "New Post"))
 
 ```swift
 // sub state reducer
-func PostReducer(action: Action, state: PostState) -> PostState {
-    switch action {
-    case _ as PostAction.LoadPosts:
-        return state
-        break
-    case let action as PostAction.AddOne:
-        return PostState(posts: [] + state.posts + [action.post])
-    default:
-        return state
-    }
-}
-
 // main state reducer
-func AppReducer(action: Action, state: AppState) -> AppState {
-    return AppState(
-        posts: PostReducer(action: action, state: state.posts)
-    )
-}
+ let appReducer: RXReducer<AppState> = { state, action in
+     var state = state
+     
+     state.posts = postsReducer(state.posts, action)
+     
+     return state
+ }
+
+// sub state reducer
+ let postsReducer: RXReducer<PostsState> = { state, action in
+     var state = state
+     
+     switch action as! PostAction {
+         case .load:
+             print("")
+         case .loadSuccess(let posts):
+             state.posts = posts
+         case .loadFailure(let error):
+             print(error)
+    }
+     
+     return state
+ }
 ```
 
 ### Store
-Store keeps all the data in app in the main `State` that can be mutated by its `Reducer`.
-The only way to change the state is to dispatch an action on it.
+
+`Store` keeps the reactively changing data model in your application.
+Store can be subscribed to many places inside your application, very helpful can be `EnvironmentObject` for storing our `Store`.
+The data inside store can be only updated by `dispatching` an `Action`.`Action` can also provide additional data with its payload.
+
+The key alements are `State` and its `Reducer`, they need to be injected inside store during the initialiation.
+The optional option is to add some `Effects` that will allow perform async request in your application and update data to your `Store`.
     
-SceneDelegate.swift
 ```swift
 import SwiftRX
 
-class SceneDelegate: UIResponder, UIWindowSceneDelegate {
-    // define global store
-    let store: Store<AppState> = Store<AppState>(initialState: AppState(), reducer: AppReducer)
-    ...
+// Create State
+ struct AppState: RXState {
+     var posts = PostsState()
+ }
 
-    func scene(_ scene: UIScene, willConnectTo session: UISceneSession, options connectionOptions: UIScene.ConnectionOptions) {
-        let contentView = AppView().environmentObject(store) /// Inject `Store` to `AppView` as `EnvironmentObject`
-        ...
+// Create Reducer
+ let appReducer: RXReducer<AppState> = { state, action in
+     var state = state
+     
+     state.posts = postsReducer(state.posts, action)
+     
+     return state
+ }
+
+// Create Store instance
+let store: RXStore<AppState> = RXStore(reducer: appReducer, state: AppState(), effects: [RXLogger()])
+
+
+// Subscribing store
+
+struct LoginView: View {
+    // Store available in View
+    @EnvironmentObject var store: RXStore<AppState>
+
+        var body: some View {
+            // Subscribing data from store
+             Button("Total posts: \(store.state.posts.posts.count)") {
+                // Dispatching an action
+                store.dispatch(PostAction.load)
+
+                // or with payload
+                store.dispatch(PostAction.loadSuccess(Post(id: 10, title: "New Post")))
+
+            }
+        }
     }
 }
 ```
@@ -112,7 +144,7 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 AppView.swift and its sub views
 ```swift
 struct AppView: View {
-    @EnvironmentObject var store: Store<AppState>
+    @EnvironmentObject var store: RXStore<AppState>
 }
 ```
 
@@ -121,7 +153,7 @@ It is optional but helps to create a shortcut path inside `Views` to access data
 Its a simple computed variable.
 ```swift
 struct AppView: View {
-    @EnvironmentObject var store: Store<AppState>
+    @EnvironmentObject var store: RXStore<AppState>
 
     // Define selector
     var productState: ProductState {
@@ -136,53 +168,32 @@ struct AppView: View {
 
 ```
 
-### Async Actions: ActionCreator & ActionCreatorFactory
+### Effects
 
-`ActionCreator` can be used to define function that can be used to dispatch async `Action`.
-It can be usefull with making async API calls.
+Helfps to create a function that can be used to dispatch async `RXAction`.
+It can be usefull with making async API calls, or with creating middleware functions.
 
-Methd can be later dipatched in the application `Store`.
+Every efect to be executed needs to be injected into Store initializer.
 
-```swift
-let AsyncWithoutPayload: ActionCreator = { store in
-    DispatchQueue.main.async {
-        // action dispatched asynchronously
-        store.dispatch(PostAction.AddOne(post: "Default"))
-    }
-
-    // action dispatched straight away
-    return PostAction.AddOne(post: "First")
-}
-```
-
-`ActionCreatorFactory` can be used to define function that can be used to dispatch async `Action`.
-But in difference to `ActionCreator` it also supports getting payload from `Action`.
-It can be usefull with making async API calls.
-
-Methd can be later dipatched in the application `Store`.
+Effects are executed after the `RXAction` is dispatched.
+So you can make `RXAction` type check inside `RXEffect`'s body to execute special code for partical effects.
 
 ```swift
-let AsyncWithPayload: ActionCreatorFactory<PostAction.AddOne> = { payload in
-    return { store in
-        DispatchQueue.main.async {
-            store.dispatch(PostAction.AddOne(post: action.post))
-        }
-         
-        return PostAction.AddOne(post: "First")
+func RXLogger() -> RXEffect<AppState> {
+    return { state, action, dispatcher in
+        print("[\(action.self)]")
     }
 }
 ```
 
 ## Extra
-### Request<SuccessType, FailureType>
+### RXRequest<SuccessType, FailureType>
 This enum supports getting and storing data catched from API requests.
 
 ```swift
-struct PostsState: State {
-    let posts: Request<[Posts], String>
+struct PostsState: RXState {
+    let posts: RXRequest<[Posts], String> = .initial
 }
-
-let initialPostsState: PostsState(posts: .initial)
 ```
 
 ## Licence
