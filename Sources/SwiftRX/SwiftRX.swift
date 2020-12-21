@@ -128,7 +128,6 @@ public typealias RXDispatcher = (RXAction) -> Void
 public typealias RXEffect<Store: RXState> = (Store, RXAction, @escaping RXDispatcher) -> Void
 
 
-
 /**
     `Store` keeps the reactively changing data model in your application.
     Store can be subscribed to many places inside your application, very helpful can be `EnvironmentObject` for storing our `Store`.
@@ -233,4 +232,27 @@ public enum RXRequest<Success, Failure> {
     case inProgress
     case success(Success)
     case failure(Failure)
+}
+
+/**
+    RXLogger is a type of `Effect` that can be used to print names of all dispatched `Actions`
+ 
+    # How to use?
+         var store = RXStore(reducer: appReducer, state: AppState(), effects: [
+             RXLogger() // <- Inject logger here
+         ])
+ */
+func RXLogger<State: RXState>() -> RXEffect<State> {
+    return { state, action, dispatcher in
+        
+        var actionName = ""
+        for character in "\(action.self)" {
+            if character == "(" {
+                break
+            }
+            actionName.append(character)
+        }
+        
+        print("[\(type(of: action))] \(actionName)")
+    }
 }

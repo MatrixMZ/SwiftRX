@@ -7,7 +7,9 @@ final class SwiftRXTests: XCTestCase {
     
     override func setUp() {
         super.setUp()
-        sut = RXStore(reducer: appReducer, state: AppState())
+        sut = RXStore(reducer: appReducer, state: AppState(), effects: [
+            RXLogger()
+        ])
     }
 
     override func tearDown() {
