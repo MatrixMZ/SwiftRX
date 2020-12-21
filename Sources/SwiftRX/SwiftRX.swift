@@ -242,7 +242,7 @@ public enum RXRequest<Success, Failure> {
              RXLogger() // <- Inject logger here
          ])
  */
-func RXLogger<State: RXState>() -> RXEffect<State> {
+public func RXLogger<State: RXState>() -> RXEffect<State> {
     return { state, action, dispatcher in
         
         var actionName = ""
