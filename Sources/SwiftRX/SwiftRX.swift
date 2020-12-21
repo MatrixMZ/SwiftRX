@@ -184,7 +184,6 @@ public class RXStore<State: RXState>: ObservableObject {
     private let reducer: RXReducer<State>
     @Published public private(set) var state: State
     private let effects: [RXEffect<State>]
-    private let debuggingMode: Bool
     
     
     /**
@@ -197,11 +196,10 @@ public class RXStore<State: RXState>: ObservableObject {
             - effects: An array of middlewere (`RXEffect`) to catch and execute code during dispatching.
      
      */
-    public init(reducer: @escaping RXReducer<State>, state: State, effects: [RXEffect<State>] = [], debuggingMode: Bool = false) {
+    public init(reducer: @escaping RXReducer<State>, state: State, effects: [RXEffect<State>] = []) {
         self.reducer = reducer
         self.state = state
         self.effects = effects
-        self.debuggingMode = debuggingMode
     }
     
     /**
@@ -210,18 +208,6 @@ public class RXStore<State: RXState>: ObservableObject {
             - action: `Action` to be dispatched.
      */
     public func dispatch(_ action: RXAction) {
-        if debuggingMode {
-            var actionName = ""
-            for character in "\(action.self)" {
-                if character == "(" {
-                    return
-                }
-                actionName.append(character)
-            }
-            
-            print("[\(type(of: action))] \(actionName)")
-        }
-        
         DispatchQueue.main.async {
             self.state = self.reducer(self.state, action)
         }
