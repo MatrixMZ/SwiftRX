@@ -196,5 +196,14 @@ struct PostsState: RXState {
 }
 ```
 
+### RXLogger
+This DevTool -  `Effect` prints out in terminal all names of dispatched `Actions` in `Store` to easly debug `Store` lifecycle.
+
+```swift
+var store = RXStore(reducer: appReducer, state: AppState(), effects: [
+    RXLogger() // <- Inject logger here
+])
+```
+
 ## Licence
 Licence under the [MIT Licence](LICENSE)
